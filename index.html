@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OmniScribe Pro — 21-Mode Graphic Writing Studio</title>
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #131b2e;
+      --bg-card: rgba(22, 32, 54, 0.85);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --border: rgba(148, 163, 184, 0.2);
+      --editor-font: 'Georgia', serif;
+      --editor-align: left;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-main);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      transition: background 0.4s ease, color 0.3s ease;
+    }
+
+    /* Live Background Canvas */
+    #bgCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.65;
+    }
+
+    /* App Views */
+    .view {
+      position: relative;
+      z-index: 1;
+      display: none;
+      min-height: 100dvh;
+    }
+    .view.active { display: flex; flex-direction: column; }
+
+    /* ================= SCREEN 1: PORTAL LANDING PAGE ================= */
+    .portal-header {
+      padding: 1.2rem 1.25rem;
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .brand-logo span {
+      background: linear-gradient(135deg, #38bdf8, #a855f7, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .portal-stats {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .badge-pill {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+    .badge-pill:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+    .portal-hero {
+      text-align: center;
+      padding: 2rem 1rem 1.2rem;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .portal-hero h1 {
+      font-size: clamp(1.5rem, 4vw, 2.3rem);
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .portal-hero p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .portal-controls {
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 1rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .search-bar {
+      width: 100%;
+      padding: 0.8rem 1.1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(19, 27, 46, 0.9);
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .search-bar:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
+
+    .cat-tabs {
+      display: flex;
+      gap: 0.45rem;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+      scrollbar-width: none;
+    }
+    .cat-tabs::-webkit-scrollbar { display: none; }
+
+    .cat-tab {
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cat-tab.active {
+      background: #38bdf8;
+      color: #000;
+      border-color: #38bdf8;
+    }
+
+    /* Recent Drafts Bar */
+    .recent-bar {
+      max-width: 1180px;
+      width: 100%;
+      margin: 0 auto 1rem;
+      padding: 0 1rem;
+    }
+    .recent-list {
+      display: flex;
+      gap: 0.6rem;
+      overflow-x: auto;
+      padding: 0.4rem 0;
+      scrollbar-width: none;
+    }
+    .recent-chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.85rem;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .recent-chip:hover { border-color: #38bdf8; }
+
+    /* 21 Mode Cards Grid */
+    .modes-grid {
+      max-width: 1180px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0.5rem 1rem 3rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+      gap: 1.1rem;
+    }
+
+    .mode-card {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #131b2e;
+      cursor: pointer;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .mode-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 14px 30px -8px rgba(0,0,0,0.6);
+      border-color: var(--card-accent, #38bdf8);
+    }
+
+    .card-graphic {
+      height: 105px;
+      width: 100%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.2rem;
+      overflow: hidden;
+    }
+    .card-graphic svg {
+      width: 68px;
+      height: 68px;
+      opacity: 0.9;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+      transition: transform 0.3s ease;
+    }
+    .mode-card:hover .card-graphic svg { transform: scale(1.12) rotate(4deg); }
+
+    .card-cat-tag {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.55rem;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      font-weight: 700;
+      backdrop-filter: blur(4px);
+    }
+
+    .card-body {
+      padding: 1rem 1.15rem 1.15rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-desc {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.45;
+      margin-bottom: 0.85rem;
+    }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.73rem;
+      color: var(--card-accent, #38bdf8);
+      font-weight: 600;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding-top: 0.65rem;
+    }
+
+    /* ================= SCREEN 2: ISOLATED MODE STUDIO ================= */
+    #studioView {
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .studio-topbar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .studio-left, .studio-right {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .studio-left::-webkit-scrollbar, .studio-right::-webkit-scrollbar { display: none; }
+
+    .btn {
+      background: var(--bg-primary);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 0.42rem 0.7rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .btn:hover, .btn.active {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .btn.primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .mode-badge-header {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 700;
+      font-size: 0.92rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 8px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+    }
+
+    /* Studio Main Layout */
+    .studio-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Slide-out Sidebars (Chapters / Pinboard / Tools) */
+    .side-drawer {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: none;
+      flex-direction: column;
+      z-index: 15;
+      flex-shrink: 0;
+    }
+    .side-drawer.open { display: flex; }
+
+    @media (max-width: 768px) {
+      .side-drawer {
+        position: absolute;
+        top: 0; bottom: 0; left: 0;
+        width: 85%;
+        max-width: 310px;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.7);
+      }
+    }
+
+    .drawer-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+    .drawer-content {
+      padding: 0.75rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .chapter-item {
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+    }
+    .chapter-item.active {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+      font-weight: 700;
+    }
+
+    /* Center Writing Stage */
+    .writing-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0.65rem 0.85rem;
+      gap: 0.5rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Mode Graphic Banner inside Studio */
+    .studio-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0.9rem;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .banner-svg {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+    }
+    .banner-info h3 { font-size: 0.9rem; font-weight: 700; }
+    .banner-info p { font-size: 0.73rem; color: var(--text-muted); }
+
+    /* Mode Smart Insert Toolbar */
+    .smart-toolbar {
+      display: flex;
+      gap: 0.38rem;
+      overflow-x: auto;
+      padding-bottom: 0.15rem;
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+    .smart-toolbar::-webkit-scrollbar { display: none; }
+
+    .smart-chip {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: var(--text-main);
+      padding: 0.34rem 0.65rem;
+      border-radius: 7px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .smart-chip:hover { filter: brightness(1.2); }
+
+    /* Ornamental Frame Styles per Mode */
+    .editor-frame {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    /* Special Decorative Frame Variants */
+    .editor-frame.frame-film {
+      border-left: 14px dashed rgba(245, 158, 11, 0.35);
+      border-right: 14px dashed rgba(245, 158, 11, 0.35);
+    }
+    .editor-frame.frame-manga {
+      border: 3px solid var(--accent);
+      border-radius: 2px;
+      box-shadow: 6px 6px 0px var(--accent);
+    }
+    .editor-frame.frame-temple {
+      border: 2px double var(--accent);
+      box-shadow: inset 0 0 0 4px rgba(245, 158, 11, 0.15);
+    }
+    .editor-frame.frame-notebook {
+      background-image: repeating-linear-gradient(transparent, transparent 31px, rgba(56, 189, 248, 0.12) 32px);
+      border-left: 4px solid #ef4444;
+    }
+    .editor-frame.frame-blueprint {
+      background-image:
+        linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* Corner SVG Watermark inside Editor */
+    .editor-watermark {
+      position: absolute;
+      bottom: 15px;
+      right: 18px;
+      width: 120px;
+      height: 120px;
+      opacity: 0.07;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .doc-title-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.7rem 1rem;
+      font-size: 1.08rem;
+      font-weight: 700;
+      outline: none;
+      z-index: 1;
+    }
+
+    .main-textarea {
+      flex: 1;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      padding: 1rem 1.15rem;
+      font-family: var(--editor-font);
+      text-align: var(--editor-align);
+      font-size: 1.03rem;
+      line-height: 1.8;
+      resize: none;
+      outline: none;
+      overflow-y: auto;
+      z-index: 1;
+    }
+
+    /* Reference Pinboard Split Panel */
+    .pinboard-panel {
+      width: 270px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      display: none;
+      flex-direction: column;
+      padding: 0.75rem;
+      gap: 0.65rem;
+      overflow-y: auto;
+    }
+    .pinboard-panel.open { display: flex; }
+    .pin-img-preview {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      display: none;
+    }
+
+    /* Studio Footer & Live Mode Superpower Bar */
+    .studio-footer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 0.45rem 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .footer-metrics {
+      display: flex;
+      gap: 0.85rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .superpower-pill {
+      color: var(--accent);
+      font-weight: 700;
+      background: var(--accent-glow);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+    }
+
+    /* Modal Dialogs (Flashcards, Radar, Symbols, Poster Export) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      max-width: 560px;
+      width: 100%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+    .modal-head {
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+    }
+    .modal-body {
+      padding: 1rem 1.1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .symbol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+      gap: 0.4rem;
+    }
+    .sym-btn {
+      padding: 0.5rem;
+      font-size: 1.05rem;
+      text-align: center;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .sym-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+    .flashcard-box {
+      background: var(--bg-primary);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 2rem 1.2rem;
+      text-align: center;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    @media print {
+      #bgCanvas, .studio-topbar, .studio-banner, .smart-toolbar, .studio-footer, .side-drawer, .pinboard-panel {
+        display: none !important;
+      }
+      body, #studioView, .writing-stage, .editor-frame, .main-textarea {
+        background: #fff !important;
+        color: #000 !important;
+        border: none !important;
+        box-shadow: none !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LAYER 1: Real-Time Procedural Graphic Canvas -->
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- ================= VIEW 1: WRITER'S PORTAL (LANDING PAGE) ================= -->
+  <section id="portalView" class="view active">
+    <header class="portal-header">
+      <div class="brand-logo">✒️ Omni<span>Scribe Studio</span></div>
+      <div class="portal-stats">
+        <div class="badge-pill" id="streakBadge">🔥 1 Day Streak</div>
+        <div class="badge-pill" onclick="setupPin()">🔒 Privacy PIN</div>
+        <div class="badge-pill" onclick="exportFullVault()">💾 Backup Vault</div>
+        <div class="badge-pill" onclick="document.getElementById('vaultInput').click()">📂 Restore</div>
+        <input type="file" id="vaultInput" accept=".json" style="display:none" onchange="importFullVault(event)" />
+      </div>
+    </header>
+
+    <div class="portal-hero">
+      <h1>Choose Your Writing Universe</h1>
+      <p>Select any studio below to launch an isolated, distraction-free workspace with its own custom graphics, smart tools, and theme.</p>
+    </div>
+
+    <div class="portal-controls">
+      <input type="text" id="modeSearch" class="search-bar" placeholder="🔍 Search 21 writing modes (e.g., Manga, Devotional, Movie, Study, Trip, Geography)..." oninput="renderPortalCards()" />
+      <div class="cat-tabs" id="catTabs"></div>
+    </div>
+
+    <div class="recent-bar" id="recentBar" style="display:none;">
+      <div style="font-size:0.76rem; color:var(--text-muted); margin-bottom:0.25rem; font-weight:700;">⏱️ RESUME RECENT STUDIO:</div>
+      <div class="recent-list" id="recentList"></div>
+    </div>
+
+    <div class="modes-grid" id="modesGrid"></div>
+  </section>
+
+  <!-- ================= VIEW 2: ISOLATED MODE STUDIO ================= -->
+  <section id="studioView" class="view">
+    <header class="studio-topbar">
+      <div class="studio-left">
+        <button class="btn" onclick="returnToPortal()">← Portal</button>
+        <div class="mode-badge-header" id="studioModeBadge">🎬 Movie</div>
+        <button class="btn" onclick="toggleDrawer('chapterDrawer')">📚 Chapters</button>
+        <button class="btn" onclick="toggleDrawer('outlineDrawer')">🧭 Outline</button>
+        <button class="btn" onclick="toggleDrawer('scrapDrawer')">✂️ Scrapbook</button>
+      </div>
+      <div class="studio-right">
+        <button class="btn" onclick="openPinboard()">🖼️ Pinboard</button>
+        <button class="btn" onclick="openModal('symbolModal')">🕉️ Symbols</button>
+        <button class="btn" onclick="openRadarModal()">📊 Radar</button>
+        <button class="btn" onclick="openFlashcards()">🧠 Quiz/Cards</button>
+        <button class="btn" onclick="toggleAudio()" id="audioBtn">🎧 Ambient</button>
+        <button class="btn" onclick="toggleDictation()" id="micBtn">🎤 Mic</button>
+        <button class="btn" onclick="speakText()">🔊 Listen</button>
+        <button class="btn" onclick="exportGraphicPoster()">🎨 Poster PNG</button>
+        <button class="btn primary" onclick="exportDocTxt()">⬇️ Export</button>
+      </div>
+    </header>
+
+    <div class="studio-body">
+      <!-- Slide Drawer 1: Multi-Chapter Library -->
+      <aside class="side-drawer" id="chapterDrawer">
+        <div class="drawer-header">
+          <span>📚 Chapters & Drafts</span>
+          <button class="btn primary" onclick="createNewChapter()">+ New</button>
+        </div>
+        <div class="drawer-content" id="chapterList"></div>
+      </aside>
+
+      <!-- Slide Drawer 2: Outline & Timeline Navigator -->
+      <aside class="side-drawer" id="outlineDrawer">
+        <div class="drawer-header">
+          <span>🧭 Outline & Timeline</span>
+          <button class="btn" onclick="toggleDrawer('outlineDrawer')">✕</button>
+        </div>
+        <div class="drawer-content" id="outlineList"></div>
+      </aside>
+
+      <!-- Slide Drawer 3: Scrapbook & Version Snapshots -->
+      <aside class="side-drawer" id="scrapDrawer">
+        <div class="drawer-header">
+          <span>✂️ Scrapbook & Snapshots</span>
+          <button class="btn" onclick="saveSnapshot()">📸 Snapshot</button>
+        </div>
+        <div class="drawer-content">
+          <button class="btn" onclick="cutSelectionToScrapbook()">+ Cut Selected Text to Scrapbook</button>
+          <div id="scrapList" style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;"></div>
+        </div>
+      </aside>
+
+      <!-- Center Isolated Writing Studio -->
+      <main class="writing-stage">
+        <div class="studio-banner">
+          <div class="banner-left">
+            <div class="banner-svg" id="studioSvgIcon"></div>
+            <div class="banner-info">
+              <h3 id="studioBannerTitle">Mode Title</h3>
+              <p id="studioBannerDesc">Mode description</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:0.4rem;">
+            <button class="btn" onclick="loadModeTemplate()">✨ Starter Template</button>
+            <button class="btn" onclick="toggleClozeMask()" id="clozeBtn" title="Mask {{terms}} for exam study">🙈 Mask {{...}}</button>
+          </div>
+        </div>
+
+        <div class="smart-toolbar" id="smartToolbar"></div>
+
+        <div class="editor-frame" id="editorFrame">
+          <div class="editor-watermark" id="editorWatermark"></div>
+          <input type="text" id="docTitle" class="doc-title-input" placeholder="Document / Chapter Title..." oninput="handleEditorInput()" />
+          <textarea id="mainEditor" class="main-textarea" placeholder="Begin writing..." oninput="handleEditorInput()"></textarea>
+        </div>
+      </main>
+
+      <!-- Right Split Panel: Reference Image & Notes Pinboard -->
+      <aside class="pinboard-panel" id="pinboardPanel">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:0.85rem;">
+          <span>🖼️ Reference Pinboard</span>
+          <button class="btn" onclick="openPinboard()">✕</button>
+        </div>
+        <input type="file" accept="image/*" onchange="loadPinImage(event)" style="font-size:0.75rem;" />
+        <img id="pinPreview" class="pin-img-preview" alt="Reference" />
+        <textarea id="pinNotes" placeholder="Pin reference notes, sculpture details, map coordinates, or character bios here..." style="flex:1; background:var(--bg-primary); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:0.6rem; font-size:0.82rem; resize:none;" oninput="savePinboard()"></textarea>
+      </aside>
+    </div>
+
+    <footer class="studio-footer">
+      <div class="footer-metrics">
+        <span id="statWords">0 words</span>
+        <span id="statLines">0 lines</span>
+        <span id="statTime">0 min read</span>
+        <span class="superpower-pill" id="modeSuperpower">Ready</span>
+      </div>
+      <div style="display:flex; gap:0.6rem; align-items:center;">
+        <span id="pomoDisplay" style="cursor:pointer;" onclick="togglePomodoro()">⏱️ 25:00 Focus</span>
+        <span id="saveIndicator">✓ Saved</span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- MODAL 1: Universal Scholar's Symbol Palette -->
+  <div class="modal-overlay" id="symbolModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span>🕉️ Scholar, Script & Scientific Symbol Palette</span>
+        <button class="btn" onclick="closeModals()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.78rem; color:var(--text-muted);">Tap any symbol to insert at cursor:</div>
+        <div class="symbol-grid" id="symbolGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Readability & Pacing Radar -->
+  <div class="modal-overlay" id="radarModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span>📊 Live Craft, Pacing & Readability Radar</span>
+        <button class="btn" onclick="closeModals()">✕</button>
+      </div>
+      <div class="modal-body" id="radarBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Interactive Study Flashcards -->
+  <div class="modal-overlay" id="flashcardModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span>🧠 Active-Recall Flashcards</span>
+        <button class="btn" onclick="closeModals()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="flashcard-box" id="flashcardBox" onclick="flipFlashcard()">
+          <div id="fcFront" style="font-size:1.1rem; font-weight:700;"></div>
+          <div id="fcBack" style="font-size:0.95rem; color:var(--accent); margin-top:0.8rem; display:none;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <button class="btn" onclick="prevFlashcard()">← Previous</button>
+          <span id="fcCounter" style="font-size:0.8rem;">1 / 1</span>
+          <button class="btn primary" onclick="nextFlashcard()">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================================
+       1. SVG GRAPHIC EMBLEM LIBRARY & 21 WRITING MODES CONFIGURATION
+       ============================================================================ */
+    const SVGS = {
+      movie: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="8" y="18" width="48" height="36" rx="4"/><path d="M8 26h48M14 10l36-4 4 10-36 4z"/><circle cx="24" cy="40" r="6"/><circle cx="40" cy="40" r="6"/></svg>`,
+      play: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 12c0 20 8 32 16 32s16-12 16-32H12z"/><path d="M22 24h2M34 24h2M22 34c3 4 9 4 12 0"/><path d="M36 22c0 18 6 28 14 28s10-10 10-28H36z"/></svg>`,
+      manga: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="8" y="8" width="48" height="48"/><path d="M8 28h48M32 8v20M24 28l-8 28M44 36l6 8-6 8"/></svg>`,
+      story: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 16c10-4 18-2 24 4 6-6 14-8 24-4v36c-10-4-18-2-24 4-6-6-14-8-24-4V16z"/><path d="M32 20v36"/><circle cx="48" cy="10" r="3"/></svg>`,
+      poem: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M52 12C36 12 20 28 14 52c16-4 32-16 38-40z"/><path d="M14 52l-4 6M26 38l14-2"/></svg>`,
+      song: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="20" cy="46" r="8"/><circle cx="46" cy="40" r="8"/><path d="M28 46V16l26-6v30"/><path d="M28 24l26-6"/></svg>`,
+      devotional: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="22"/><polygon points="32,12 48,42 16,42"/><polygon points="32,52 48,22 16,22"/><circle cx="32" cy="32" r="4"/></svg>`,
+      culture: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 52V28c0-11 9-20 20-20s20 9 20 20v24"/><path d="M20 52V32c0-6.6 5.4-12 12-12s12 5.4 12 12v20"/><circle cx="32" cy="14" r="3"/></svg>`,
+      geography: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="24"/><polygon points="32,12 38,26 52,32 38,38 32,52 26,38 12,32 26,26"/></svg>`,
+      history: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 12h36M14 52h36M18 12c0 14 28 14 28 28M46 12c0 14-28 14-28 28"/></svg>`,
+      trip: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 34l44-20-18 44-8-16-18-8z"/><path d="M54 14L28 42"/></svg>`,
+      study: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="32,12 56,24 32,36 8,24"/><path d="M16 30v14c0 6 16 10 16 10s16-4 16-10V30"/><path d="M52 26v18"/></svg>`,
+      research: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="6"/><ellipse cx="32" cy="32" rx="24" ry="10" transform="rotate(30 32 32)"/><ellipse cx="32" cy="32" rx="24" ry="10" transform="rotate(-30 32 32)"/></svg>`,
+      philosophy: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="24"/><rect x="15" y="15" width="34" height="34"/><circle cx="32" cy="32" r="8"/></svg>`,
+      daily: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 24h30v18c0 8-6 14-15 14s-15-6-15-14V24z"/><path d="M44 28h6c3 0 6 3 6 6s-3 6-6 6h-6"/><path d="M22 12c0 4 4 4 4 8M32 12c0 4 4 4 4 8"/></svg>`,
+      biopic: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="16"/><circle cx="32" cy="32" r="8"/><path d="M32 8v12"/></svg>`,
+      plan: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="22"/><circle cx="32" cy="32" r="12"/><circle cx="32" cy="32" r="3"/><path d="M32 4v8M32 52v8M4 32h8M52 32h8"/></svg>`,
+      content: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="36,8 14,36 30,36 26,56 50,26 34,26"/></svg>`,
+      news: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="10" y="12" width="44" height="40" rx="3"/><path d="M18 22h28M18 30h14M18 38h14M38 30h8v12h-8z"/></svg>`,
+      speech: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="24" y="10" width="16" height="26" rx="8"/><path d="M16 26c0 9 7 16 16 16s16-7 16-16M32 42v12M22 54h20"/></svg>`,
+      business: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 52h44M16 44l12-14 10 8 14-20"/><polyline points="40,18 52,18 52,30"/></svg>`
+    };
+
+    const MODES = {
+      movie: {
+        name: "Movie Writing", icon: "🎬", cat: "Stage & Visual",
+        desc: "Hollywood screenplay studio with 35mm film strip borders & projector graphics.",
+        bg1: "#090a0f", bg2: "#161822", accent: "#f59e0b", font: "'Courier New', monospace", align: "left",
+        frame: "frame-film", anim: "projector",
+        tools: [
+          { label: "+ INT. SCENE", text: "\nINT. LOCATION - DAY\n\n" },
+          { label: "+ EXT. SCENE", text: "\nEXT. LOCATION - NIGHT\n\n" },
+          { label: "+ CHARACTER", text: "\n\t\t\tCHARACTER\n" },
+          { label: "+ (Action/Tone)", text: "\t\t(beat)\n" },
+          { label: "+ CUT TO:", text: "\n\t\t\t\t\t\tCUT TO:\n\n" }
+        ],
+        template: "FADE IN:\n\nINT. OBSERVATORY DOME - NIGHT\n\nDust motes float across the brass telescope lens.\n\n\t\t\tKABIR\n\t\t(whispering)\n\tLook at the coordinates again.\n\n\t\t\t\t\t\tCUT TO:\n"
+      },
+      play: {
+        name: "Playwriting", icon: "🎭", cat: "Stage & Visual",
+        desc: "Velvet theater stage layout with acts, scenes, lighting cues & curtains.",
+        bg1: "#1a0910", bg2: "#2d101b", accent: "#fbbf24", font: "'Courier New', monospace", align: "left",
+        frame: "frame-temple", anim: "sparks",
+        tools: [
+          { label: "+ ACT I", text: "\n# ACT I\n\n" },
+          { label: "+ SCENE", text: "\n## SCENE 1\n\n" },
+          { label: "+ [Stage Cue]", text: "\n[STAGE DIRECTION: Warm spotlight rises center stage.]\n" },
+          { label: "+ CHARACTER:", text: "\nCHARACTER: " },
+          { label: "+ [CURTAIN]", text: "\n\n[CURTAIN]\n" }
+        ],
+        template: "# ACT I\n## SCENE 1\n\n[SETTING: An ancient courtyard at dusk. Lanterns flicker.]\n\nSUTRADHAR: Every curtain hides a mirror.\n\n[CURTAIN]"
+      },
+      manga: {
+        name: "Manga / Manhwa Writing", icon: "🗯️", cat: "Stage & Visual",
+        desc: "Comic panel & Webtoon vertical script with dynamic speed-lines & panel pacing alerts.",
+        bg1: "#0d0d11", bg2: "#1b1b24", accent: "#f43f5e", font: "system-ui, sans-serif", align: "left",
+        frame: "frame-manga", anim: "speedlines",
+        tools: [
+          { label: "📄 New Page", text: "\n# 📄 PAGE 1\n" },
+          { label: "🔲 Panel", text: "\n🔲 Panel 1 [Wide Shot]: " },
+          { label: "💬 Bubble", text: "\n\t💬 CHARACTER: \"\"" },
+          { label: "💥 SFX", text: "\n\t💥 SFX: DOOOOM! (ゴゴゴ)" },
+          { label: "📱 Webtoon Scroll Gap", text: "\n\n--- [VERTICAL SCROLL BEAT] ---\n\n" }
+        ],
+        template: "# 📄 PAGE 1\n\n🔲 Panel 1 [Extreme Close-Up]: Sharp eyes reflecting crimson lightning.\n\t💥 SFX: KRA-KOOM!\n\n🔲 Panel 2 [Low Angle Action Shot]: The blade slices through the rain.\n\t💬 RYU: \"You're three seconds too slow.\"\n"
+      },
+      story: {
+        name: "Story Writing", icon: "📖", cat: "Literature & Sacred",
+        desc: "Starry midnight book studio for novels, short fiction & worldbuilding.",
+        bg1: "#0b1120", bg2: "#17213a", accent: "#60a5fa", font: "'Georgia', serif", align: "left",
+        frame: "", anim: "stars",
+        tools: [
+          { label: "+ Chapter", text: "\n# CHAPTER \n\n" },
+          { label: "+ Scene Break", text: "\n\n* * *\n\n" },
+          { label: "+ Character Note", text: "\n[Character Arc: ]\n" },
+          { label: "+ Setting", text: "\n[Setting & Sensory Detail: ]\n" }
+        ],
+        template: "# CHAPTER I: The Horizon Bell\n\nThe desert wind carried the scent of rain long before the clouds appeared over the fort walls.\n\n* * *\n"
+      },
+      poem: {
+        name: "Poem Writing", icon: "🪶", cat: "Literature & Sacred",
+        desc: "Centered twilight verse canvas with live syllable counter & floating feathers.",
+        bg1: "#161124", bg2: "#241b3a", accent: "#c084fc", font: "'Georgia', serif", align: "center",
+        frame: "", anim: "feathers",
+        tools: [
+          { label: "+ Stanza Break", text: "\n\n" },
+          { label: "+ Couplet Divider", text: "\n— ✦ —\n" },
+          { label: "+ [Refrain]", text: "\n[Refrain]\n" },
+          { label: "⇄ Toggle Align", action: "align" }
+        ],
+        template: "Silent marbles in the moonlight glow,\nWhispering tales of centuries ago,\n\n— ✦ —\n\nCarved in patience, stone by stone,\nTime bows down before the throne."
+      },
+      song: {
+        name: "Song & Lyrics", icon: "🎵", cat: "Literature & Sacred",
+        desc: "Audio-wave studio for songwriting, verses, hooks, chords & BPM structure.",
+        bg1: "#09151b", bg2: "#102630", accent: "#2dd4bf", font: "system-ui, sans-serif", align: "left",
+        frame: "", anim: "waves",
+        tools: [
+          { label: "[Verse 1]", text: "\n[Verse 1]\n" },
+          { label: "[Chorus / Hook]", text: "\n[Chorus]\n" },
+          { label: "[Bridge]", text: "\n[Bridge]\n" },
+          { label: "[Chords: Am - F - C - G]", text: "[Chords: Am | F | C | G]\n" }
+        ],
+        template: "🎹 Tempo: 110 BPM | Key: A Minor\n\n[Verse 1]\nWalking down the neon lane\nEchoes falling like the rain\n\n[Chorus]\nTurn the static into gold\n"
+      },
+      devotional: {
+        name: "Devotional & Sculpture", icon: "🪔", cat: "Literature & Sacred",
+        desc: "Sacred Tamra-Patra studio with rotating Sri Mandala, Shloka tags & Sculpture iconography.",
+        bg1: "#1c0d06", bg2: "#2e160b", accent: "#f59e0b", font: "'Georgia', serif", align: "center",
+        frame: "frame-temple", anim: "mandala",
+        tools: [
+          { label: "🕉️ Mangalacharan", text: "॥ श्री गणेशाय नमः ॥\n\n" },
+          { label: "॥ Shloka ॥", text: "\n॥ १ ॥\n" },
+          { label: "🗿 Sculpture Iconography", text: "\n\n[🗿 Sculpture Form / Asana / Mudra / Ayudha]:\n• Posture: \n• Mudra & Attributes: \n• Spiritual Symbolism: \n" },
+          { label: "📖 Bhashya (Meaning)", text: "\n\n[📖 Bhashya / Commentary]:\n" }
+        ],
+        template: "॥ ॐ नमो भगवते वासुदेवाय ॥\n\n[Deity / Temple Sculpture]: \n\n[Shloka / Stotra]:\nशान्ताकारं भुजगशयनं पद्मनाभं सुरेशम्\n॥ १ ॥\n\n[🗿 Sculpture Form / Asana / Mudra / Ayudha]:\n• Stone & Style: \n• Mudra & Symbols: \n\n[📖 Bhashya / Meaning]:\n"
+      },
+      culture: {
+        name: "Culture Writing", icon: "🏺", cat: "Earth & Heritage",
+        desc: "Royal terracotta studio for folk traditions, festivals, heritage crafts & dialects.",
+        bg1: "#21100b", bg2: "#361b12", accent: "#fb923c", font: "'Georgia', serif", align: "left",
+        frame: "frame-temple", anim: "mandala",
+        tools: [
+          { label: "🎭 Festival / Ritual", text: "\n# 🎭 Festival & Ritual:\n" },
+          { label: "🎨 Craft & Architecture", text: "\n🎨 Art, Craft & Miniature Style:\n" },
+          { label: "🍲 Culinary Heritage", text: "\n🍲 Traditional Cuisine:\n" },
+          { label: "🗣️ Folk Proverb / Lore", text: "\n> 🗣️ Local Saying / Folk Song:\n" }
+        ],
+        template: "# 🏺 Cultural Region & Heritage:\n\n🎭 Traditions & Festivals:\n\n🎨 Architecture & Craftsmanship:\n\n🗣️ Local Folklore & Proverbs:\n"
+      },
+      geography: {
+        name: "Geography Writing", icon: "🧭", cat: "Earth & Heritage",
+        desc: "Cartographer's atlas with topographic contour graphics, landforms, climate & resources.",
+        bg1: "#071714", bg2: "#0e2923", accent: "#34d399", font: "system-ui, sans-serif", align: "left",
+        frame: "frame-blueprint", anim: "contours",
+        tools: [
+          { label: "🌐 Region & Coords", text: "\n# 🌐 Region & Coordinates:\n" },
+          { label: "⛰️ Topography/Relief", text: "\n⛰️ Landforms & Drainage Basin:\n" },
+          { label: "🌦️ Climate & Monsoon", text: "\n🌦️ Climatic Zone & Rainfall:\n" },
+          { label: "🌾 Soil & Minerals", text: "\n🌾 Soil Type, Crops & Minerals:\n" }
+        ],
+        template: "# 🌐 Geographical Study: Aravalli Range & Plain\n\n⛰️ Topography & Drainage:\n• Elevation: \n• Major Rivers: {{Luni}}, {{Banas}}\n\n🌦️ Climate & Vegetation:\n\n🌾 Minerals & Economic Geography:\n"
+      },
+      history: {
+        name: "History Writing", icon: "🏛️", cat: "Earth & Heritage",
+        desc: "Ancient chronicle studio with timeline extraction, dynasties, causes & inscriptions.",
+        bg1: "#1a140b", bg2: "#2b2113", accent: "#eab308", font: "'Georgia', serif", align: "left",
+        frame: "frame-temple", anim: "sparks",
+        tools: [
+          { label: "🏛️ Era / Dynasty", text: "\n# 🏛️ Dynasty / Period:\n" },
+          { label: "📅 Year / Event", text: "\n📅 1576 CE: " },
+          { label: "⚔️ Cause & Impact", text: "\n⚔️ Causes & Historical Impact:\n• " },
+          { label: "📜 Inscription/Source", text: "\n📜 Primary Source / Epigraphy:\n" }
+        ],
+        template: "# 🏛️ Era / Dynasty:\n\n📅 1191 CE: First major confrontation.\n📅 1576 CE: Key turning point in regional sovereignty.\n\n⚔️ Causes & Long-Term Consequences:\n• \n\n📜 Archaeological / Literary Sources:\n"
+      },
+      trip: {
+        name: "Trip / Tour Writing", icon: "✈️", cat: "Earth & Heritage",
+        desc: "Wanderlust travelogue with route vectors, packing lists & live ₹ expense calculator.",
+        bg1: "#081624", bg2: "#102840", accent: "#38bdf8", font: "system-ui, sans-serif", align: "left",
+        frame: "", anim: "routes",
+        tools: [
+          { label: "📍 Day & Stop", text: "\n# 📍 Day 1: Destination\n" },
+          { label: "💰 Add Expense (₹)", text: " [Cost: ₹500] " },
+          { label: "🚗 Transport", text: "\n🚗 Route & Transport: " },
+          { label: "🍴 Food Spot", text: "\n🍴 Must-Try Local Food: " },
+          { label: "🎒 Packing Item", text: "\n☐ Pack: " }
+        ],
+        template: "# 📍 Day 1: Heritage Fort & Lake Tour\n\n🚗 Morning Route: Highway departure at 7:00 AM [Cost: ₹600]\n🏰 Sightseeing: Main Fort Entry & Audio Guide [Cost: ₹250]\n🍴 Lunch: Traditional Thali near Old Market [Cost: ₹350]\n\n💭 Travelogue Highlight:\n"
+      },
+      study: {
+        name: "Study Writing", icon: "🎓", cat: "Academic & Thought",
+        desc: "Ruled Cornell notebook with {{Cloze}} exam masking, formulas & 1-click flashcards.",
+        bg1: "#0f172a", bg2: "#1e293b", accent: "#facc15", font: "system-ui, sans-serif", align: "left",
+        frame: "frame-notebook", anim: "network",
+        tools: [
+          { label: "📌 Core Concept", text: "\n# 📌 TOPIC: \n" },
+          { label: "❓ Exam Question", text: "\n❓ Question: \n💡 Answer: " },
+          { label: "🙈 {{Cloze Term}}", text: "{{Key Term}}" },
+          { label: "📐 Formula / Law", text: "\n📐 Formula: " },
+          { label: "🧠 Trick/Mnemonic", text: "\n🧠 Memory Trick: " }
+        ],
+        template: "# 📌 TOPIC:Laws of Thermodynamics & Optics\n\n❓ Question: What is the First Law of Thermodynamics?\n💡 Answer: Conservation of energy (ΔU = Q - W).\n\n• The refractive index of water is approximately {{1.33}}.\n• Snell's Law formula is {{n1 sin(θ1) = n2 sin(θ2)}}.\n"
+      },
+      research: {
+        name: "Research Writing", icon: "🔬", cat: "Academic & Thought",
+        desc: "Molecular network academic studio for abstracts, methodology, findings & citations.",
+        bg1: "#0a121e", bg2: "#142238", accent: "#38bdf8", font: "'Georgia', serif", align: "left",
+        frame: "", anim: "network",
+        tools: [
+          { label: "+ Abstract", text: "\n# ABSTRACT\n" },
+          { label: "+ Methodology", text: "\n# METHODOLOGY\n" },
+          { label: "+ Results & Data", text: "\n# RESULTS & DISCUSSION\n" },
+          { label: "+ (Citation, 2026)", text: " (Author, 2026) " },
+          { label: "+ References", text: "\n# REFERENCES\n1. " }
+        ],
+        template: "# RESEARCH TITLE\n\n# ABSTRACT\nThis study investigates...\n\n# METHODOLOGY\n\n# RESULTS & DISCUSSION\n\n# REFERENCES\n1. "
+      },
+      philosophy: {
+        name: "Philosophy & Essay", icon: "⚖️", cat: "Academic & Thought",
+        desc: "Sacred Golden-Ratio marble studio for thesis, antithesis, synthesis & deep inquiry.",
+        bg1: "#141619", bg2: "#22262b", accent: "#cbd5e1", font: "'Georgia', serif", align: "left",
+        frame: "", anim: "mandala",
+        tools: [
+          { label: "🏛️ Thesis", text: "\n# 🏛️ Primary Thesis:\n" },
+          { label: "⚔️ Counter-Argument", text: "\n# ⚔️ Antithesis / Objection:\n" },
+          { label: "💭 Thought Experiment", text: "\n> 💭 Thought Experiment:\n" },
+          { label: "🔗 Synthesis", text: "\n# 🔗 Synthesis & Conclusion:\n" }
+        ],
+        template: "# 🏛️ Primary Thesis:\nDoes consciousness precede action, or does action shape consciousness?\n\n# ⚔️ Antithesis / Objection:\n\n# 🔗 Synthesis & Conclusion:\n"
+      },
+      daily: {
+        name: "Daily Day Writing", icon: "📔", cat: "Personal & Strategy",
+        desc: "Warm tea-house journal with rising steam graphics, mood tracking & gratitude.",
+        bg1: "#1a120e", bg2: "#2c1e18", accent: "#f97316", font: "system-ui, sans-serif", align: "left",
+        frame: "", anim: "sparks",
+        tools: [
+          { label: "📅 Now", action: "date" },
+          { label: "😊 Mood & Energy", text: "\nMood: 😊 Calm | Energy: 8/10\n" },
+          { label: "🙏 3 Gratitudes", text: "\n🙏 Grateful For:\n1. \n2. \n3. \n" },
+          { label: "🏆 Daily Highlight", text: "\n🏆 Today's Win:\n" }
+        ],
+        template: `📅 ${new Date().toLocaleDateString()}\nMood: 😊 Focused | Energy: 8/10\n\n🏆 Today's Highlight:\n\n🙏 3 Things I'm Grateful For:\n1. \n2. \n3. \n`
+      },
+      biopic: {
+        name: "Self-Biopic Writing", icon: "🪞", cat: "Personal & Strategy",
+        desc: "Tree-of-Life memoir studio to chronicle your personal chapters & turning points.",
+        bg1: "#18101c", bg2: "#291b30", accent: "#e879f9", font: "'Georgia', serif", align: "left",
+        frame: "frame-temple", anim: "contours",
+        tools: [
+          { label: "🌱 Life Era / Year", text: "\n# 📅 Year / Era: \n" },
+          { label: "📍 The Setting", text: "\n📍 Where I Was:\n" },
+          { label: "🔄 Turning Point", text: "\n🔄 The Turning Point:\n" },
+          { label: "💭 Lesson Learned", text: "\n💭 Looking Back:\n" }
+        ],
+        template: "# 📅 2026: The Year of Building\n\n📍 Setting the Scene:\n\n🔄 The Turning Point:\n\n💭 What This Chapter Taught Me:\n"
+      },
+      plan: {
+        name: "Plan Writing", icon: "🗺️", cat: "Personal & Strategy",
+        desc: "CAD blueprint grid with live % progress bar for goals, roadmaps & action checklists.",
+        bg1: "#071326", bg2: "#0d2142", accent: "#38bdf8", font: "system-ui, sans-serif", align: "left",
+        frame: "frame-blueprint", anim: "network",
+        tools: [
+          { label: "🎯 Main Objective", text: "\n# 🎯 OBJECTIVE:\n" },
+          { label: "☐ To-Do Task", text: "\n☐ " },
+          { label: "☑ Completed Task", text: "\n☑ " },
+          { label: "⏳ Milestone", text: "\n⏳ Milestone & Deadline: " }
+        ],
+        template: "# 🎯 OBJECTIVE: Q4 Master Roadmap\n\n☐ Complete core architecture\n☐ Review study syllabus chapters\n☑ Set up daily workspace\n"
+      },
+      content: {
+        name: "Content Writing", icon: "⚡", cat: "Media & Professional",
+        desc: "Creator neon studio for viral hooks, reels/shorts scripts, value bullets & CTAs.",
+        bg1: "#130924", bg2: "#21103d", accent: "#ec4899", font: "system-ui, sans-serif", align: "left",
+        frame: "", anim: "waves",
+        tools: [
+          { label: "🔥 Hook (0-3s)", text: "🔥 HOOK (0-3s): \n\n" },
+          { label: "🎥 Visual B-Roll", text: "[🎥 VISUAL: ]\n" },
+          { label: "💡 Value Point", text: "• 💡 " },
+          { label: "👉 CTA", text: "\n👉 CTA: " }
+        ],
+        template: "🔥 HOOK (0-3s): Stop making this mistake when starting a new project.\n\n[🎥 VISUAL: Fast zoom into screen]\n• 💡 Secret 1: Isolate your workspace\n• 💡 Secret 2: Automate your templates\n\n👉 CTA: Comment 'STUDIO' for the link!"
+      },
+      news: {
+        name: "News or Blog Writing", icon: "📰", cat: "Media & Professional",
+        desc: "Pressroom editorial layout with wireframe globe graphics, datelines & inverted pyramid.",
+        bg1: "#111318", bg2: "#1e222b", accent: "#ef4444", font: "'Georgia', serif", align: "left",
+        frame: "", anim: "network",
+        tools: [
+          { label: "📰 Headline", text: "# HEADLINE: \n\n" },
+          { label: "📍 Dateline", text: "JAIPUR, Oct 28 — " },
+          { label: "🗣️ Expert Quote", text: '\n> "Direct quote here," said [Official].\n' },
+          { label: "📑 Subheading", text: "\n## Key Development\n" }
+        ],
+        template: "# HEADLINE: Digital Studios Transform Regional Publishing\n\nJAIPUR, Oct 28 — Independent creators are adopting multi-mode workspaces to streamline production.\n\n> \"Speed and structure are everything,\" said lead analyst.\n"
+      },
+      speech: {
+        name: "Speech & Debate", icon: "🎙️", cat: "Media & Professional",
+        desc: "Podium spotlight studio with live speaking-time calculator & vocal emphasis tags.",
+        bg1: "#091426", bg2: "#122444", accent: "#fbbf24", font: "system-ui, sans-serif", align: "left",
+        frame: "", anim: "projector",
+        tools: [
+          { label: "[PAUSE 2s]", text: " [⏸️ PAUSE 2s] " },
+          { label: "[EMPHASIZE]", text: " *[🔊 EMPHASIZE]* " },
+          { label: "🎤 Opening Hook", text: "# 🎤 OPENING HOOK:\n" },
+          { label: "⚔️ Rebuttal", text: "\n# ⚔️ REBUTTAL POINT:\n" }
+        ],
+        template: "# 🎤 OPENING HOOK:\nRespected jury and fellow citizens, [⏸️ PAUSE 2s] imagine a world where every voice has its own stage.\n"
+      },
+      business: {
+        name: "Business & Pitch", icon: "📈", cat: "Media & Professional",
+        desc: "Executive emerald studio for startup pitches, revenue models, pricing & strategy.",
+        bg1: "#061a14", bg2: "#0c2e24", accent: "#10b981", font: "system-ui, sans-serif", align: "left",
+        frame: "frame-blueprint", anim: "routes",
+        tools: [
+          { label: "❗ Problem", text: "\n# ❗ PROBLEM STATEMENT\n" },
+          { label: "🚀 Solution", text: "\n# 🚀 SOLUTION & PRODUCT\n" },
+          { label: "💰 Revenue/Cost", text: " [Cost: ₹10000] " },
+          { label: "📈 Market Edge", text: "\n# 📈 COMPETITIVE ADVANTAGE\n" }
+        ],
+        template: "# ❗ PROBLEM STATEMENT\nWriters juggle 10 fragmented apps.\n\n# 🚀 SOLUTION & PRODUCT\nOmniScribe unites 21 bespoke studios in one lightweight platform.\n"
+      }
+    };
+
+    const SYMBOLS = [
+      "ॐ","।","॥","ऽ","श्री","☸","卐","✦","ā","ī","ū","ṛ","ś","ṣ","ṇ","ṃ",
+      "₹","$","€","°","±","Δ","π","∑","√","∞","→","⇌","↑","↓","²","³","μ","α","β","θ",
+      "☐","☑","★","☆","♪","♫","§","©","™","«","»","—"
+    ];
+
+    /* ============================================================================
+       2. STATE MANAGEMENT & PORTAL RENDERING
+       ============================================================================ */
+    let activeMode = "movie";
+    let activeChapterId = "default";
+    let activeCat = "All";
+    let clozeMasked = false;
+    let rawBackupText = "";
+    let flashcards = [];
+    let fcIndex = 0;
+
+    function initApp() {
+      renderCategories();
+      renderPortalCards();
+      renderRecentBar();
+      initSymbolPalette();
+      updateStreak();
+      startCanvasEngine("stars");
+    }
+
+    function renderCategories() {
+      const cats = ["All", ...new Set(Object.values(MODES).map(m => m.cat))];
+      const container = document.getElementById("catTabs");
+      container.innerHTML = "";
+      cats.forEach(c => {
+        const b = document.createElement("button");
+        b.className = `cat-tab ${c === activeCat ? 'active' : ''}`;
+        b.textContent = c;
+        b.onclick = () => { activeCat = c; renderCategories(); renderPortalCards(); };
+        container.appendChild(b);
+      });
+    }
+
+    function renderPortalCards() {
+      const q = document.getElementById("modeSearch").value.toLowerCase();
+      const grid = document.getElementById("modesGrid");
+      grid.innerHTML = "";
+
+      Object.entries(MODES).forEach(([key, m]) => {
+        if (activeCat !== "All" && m.cat !== activeCat) return;
+        if (q && !m.name.toLowerCase().includes(q) && !m.desc.toLowerCase().includes(q) && !m.cat.toLowerCase().includes(q)) return;
+
+        const chapters = getModeChapters(key);
+        const totalWords = chapters.reduce((acc, ch) => acc + (ch.content.trim() ? ch.content.trim().split(/\s+/).length : 0), 0);
+
+        const card = document.createElement("div");
+        card.className = "mode-card";
+        card.style.setProperty("--card-accent", m.accent);
+        card.onclick = () => openModeStudio(key);
+
+        card.innerHTML = `
+          <div class="card-graphic" style="background: radial-gradient(circle at 80% 20%, ${m.accent}33, ${m.bg2} 75%); border-bottom: 1px solid ${m.accent}44;">
+            <div>
+              <span class="card-cat-tag">${m.cat}</span>
+              <div style="margin-top:0.5rem; font-size:1.4rem;">${m.icon}</div>
+            </div>
+            <div style="color:${m.accent}">${SVGS[key]}</div>
+          </div>
+          <div class="card-body">
+            <div>
+              <div class="card-title">
+                <span>${m.name}</span>
+              </div>
+              <p class="card-desc">${m.desc}</p>
+            </div>
+            <div class="card-footer">
+              <span>📚 ${chapters.length} Draft${chapters.length > 1 ? 's' : ''} (${totalWords} words)</span>
+              <span>Launch Studio →</span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderRecentBar() {
+      const recents = JSON.parse(localStorage.getItem("omniscribe_recents") || "[]");
+      const bar = document.getElementById("recentBar");
+      const list = document.getElementById("recentList");
+      if (!recents.length) { bar.style.display = "none"; return; }
+      bar.style.display = "block";
+      list.innerHTML = "";
+      recents.forEach(key => {
+        if (!MODES[key]) return;
+        const chip = document.createElement("div");
+        chip.className = "recent-chip";
+        chip.innerHTML = `<span>${MODES[key].icon}</span> <strong>${MODES[key].name}</strong>`;
+        chip.onclick = () => openModeStudio(key);
+        list.appendChild(chip);
+      });
+    }
+
+    /* ============================================================================
+       3. ISOLATED MODE STUDIO NAVIGATION & STORAGE
+       ============================================================================ */
+    function openModeStudio(modeKey) {
+      // Privacy PIN check for Personal modes
+      const savedPin = localStorage.getItem("omniscribe_pin");
+      if (savedPin && ["daily", "biopic", "plan", "business"].includes(modeKey)) {
+        const entered = prompt(`🔒 Enter 4-Digit Privacy PIN to unlock ${MODES[modeKey].name}:`);
+        if (entered !== savedPin) { alert("Incorrect PIN!"); return; }
+      }
+
+      activeMode = modeKey;
+      const m = MODES[modeKey];
+
+      // Save to Recent list
+      let recents = JSON.parse(localStorage.getItem("omniscribe_recents") || "[]");
+      recents = [modeKey, ...recents.filter(k => k !== modeKey)].slice(0, 6);
+      localStorage.setItem("omniscribe_recents", JSON.stringify(recents));
+
+      // Apply Exclusive Mode Theme Variables
+      document.documentElement.style.setProperty("--bg-primary", m.bg1);
+      document.documentElement.style.setProperty("--bg-secondary", m.bg2);
+      document.documentElement.style.setProperty("--bg-card", m.bg2 + "d9");
+      document.documentElement.style.setProperty("--accent", m.accent);
+      document.documentElement.style.setProperty("--accent-glow", m.accent + "33");
+      document.documentElement.style.setProperty("--editor-font", m.font);
+      document.documentElement.style.setProperty("--editor-align", m.align);
+
+      // Update Studio Graphic Elements
+      document.getElementById("studioModeBadge").innerHTML = `${m.icon} ${m.name}`;
+      document.getElementById("studioBannerTitle").textContent = `${m.icon} ${m.name} Studio`;
+      document.getElementById("studioBannerDesc").textContent = m.desc;
+      document.getElementById("studioSvgIcon").innerHTML = `<div style="color:${m.accent}">${SVGS[modeKey]}</div>`;
+      document.getElementById("editorWatermark").innerHTML = `<div style="color:${m.accent}">${SVGS[modeKey]}</div>`;
+
+      // Apply Ornamental Frame Class
+      const frameEl = document.getElementById("editorFrame");
+      frameEl.className = `editor-frame ${m.frame || ''}`;
+
+      // Render Smart Insert Chips
+      const toolbar = document.getElementById("smartToolbar");
+      toolbar.innerHTML = "";
+      m.tools.forEach(t => {
+        const btn = document.createElement("button");
+        btn.className = "smart-chip";
+        btn.textContent = t.label;
+        btn.onclick = () => {
+          if (t.action === "date") insertSnippet(`\n📅 ${new Date().toLocaleString()}\n`);
+          else if (t.action === "align") {
+            const cur = document.documentElement.style.getPropertyValue("--editor-align");
+            document.documentElement.style.setProperty("--editor-align", cur === "center" ? "left" : "center");
+          } else insertSnippet(t.text);
+        };
+        toolbar.appendChild(btn);
+      });
+
+      // Load Chapters for this Mode
+      const chapters = getModeChapters(modeKey);
+      activeChapterId = chapters[0].id;
+      loadChapterIntoEditor();
+      renderChapterDrawer();
+      loadPinboard();
+      renderScrapbook();
+
+      // Switch View & Start Mode Canvas Animation
+      document.getElementById("portalView").classList.remove("active");
+      document.getElementById("studioView").classList.add("active");
+      startCanvasEngine(m.anim, m.accent);
+    }
+
+    function returnToPortal() {
+      if (clozeMasked) toggleClozeMask();
+      document.getElementById("studioView").classList.remove("active");
+      document.getElementById("portalView").classList.add("active");
+      document.documentElement.style.setProperty("--bg-primary", "#0b0f19");
+      document.documentElement.style.setProperty("--bg-secondary", "#131b2e");
+      document.documentElement.style.setProperty("--accent", "#38bdf8");
+      renderPortalCards();
+      renderRecentBar();
+      startCanvasEngine("stars", "#38bdf8");
+    }
+
+    function getModeChapters(modeKey) {
+      const raw = localStorage.getItem(`omniscribe_chapters_${modeKey}`);
+      if (raw) return JSON.parse(raw);
+      return [{ id: "ch_1", title: `${MODES[modeKey].name} - Draft 1`, content: "" }];
+    }
+
+    function saveModeChapters(modeKey, chapters) {
+      localStorage.setItem(`omniscribe_chapters_${modeKey}`, JSON.stringify(chapters));
+    }
+
+    function loadChapterIntoEditor() {
+      const chapters = getModeChapters(activeMode);
+      const ch = chapters.find(c => c.id === activeChapterId) || chapters[0];
+      document.getElementById("docTitle").value = ch.title;
+      document.getElementById("mainEditor").value = ch.content;
+      updateLiveMetrics();
+      renderOutline();
+    }
+
+    function handleEditorInput() {
+      if (clozeMasked) return;
+      const chapters = getModeChapters(activeMode);
+      const idx = chapters.findIndex(c => c.id === activeChapterId);
+      if (idx > -1) {
+        chapters[idx].title = document.getElementById("docTitle").value;
+        chapters[idx].content = document.getElementById("mainEditor").value;
+        saveModeChapters(activeMode, chapters);
+      }
+      document.getElementById("saveIndicator").textContent = "✓ Saved";
+      updateLiveMetrics();
+      renderChapterDrawer();
+      renderOutline();
+    }
+
+    function createNewChapter() {
+      const chapters = getModeChapters(activeMode);
+      const newId = "ch_" + Date.now();
+      chapters.push({ id: newId, title: `Chapter / Draft ${chapters.length + 1}`, content: "" });
+      saveModeChapters(activeMode, chapters);
+      activeChapterId = newId;
+      loadChapterIntoEditor();
+      renderChapterDrawer();
+    }
+
+    function renderChapterDrawer() {
+      const chapters = getModeChapters(activeMode);
+      const list = document.getElementById("chapterList");
+      list.innerHTML = "";
+      chapters.forEach(ch => {
+        const div = document.createElement("div");
+        div.className = `chapter-item ${ch.id === activeChapterId ? 'active' : ''}`;
+        div.innerHTML = `
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📄 ${ch.title || 'Untitled'}</span>
+          ${chapters.length > 1 ? `<span onclick="deleteChapter(event, '${ch.id}')" style="color:#ef4444; padding:0 4px;">✕</span>` : ''}
+        `;
+        div.onclick = () => { activeChapterId = ch.id; loadChapterIntoEditor(); renderChapterDrawer(); };
+        list.appendChild(div);
+      });
+    }
+
+    function deleteChapter(e, id) {
+      e.stopPropagation();
+      if (!confirm("Delete this chapter/draft?")) return;
+      let chapters = getModeChapters(activeMode).filter(c => c.id !== id);
+      saveModeChapters(activeMode, chapters);
+      activeChapterId = chapters[0].id;
+      loadChapterIntoEditor();
+      renderChapterDrawer();
+    }
+
+    /* ============================================================================
+       4. LIVE MODE SUPERPOWERS (CALCULATORS, PACING, SYLLABLES, PROGRESS)
+       ============================================================================ */
+    function updateLiveMetrics() {
+      const text = document.getElementById("mainEditor").value;
+      const trimmed = text.trim();
+      const words = trimmed ? trimmed.split(/\s+/).length : 0;
+      const lines = text ? text.split("\n").length : 0;
+      const mins = Math.ceil(words / 180);
+
+      document.getElementById("statWords").textContent = `${words} words`;
+      document.getElementById("statLines").textContent = `${lines} lines`;
+      document.getElementById("statTime").textContent = `${mins} min read`;
+
+      const sp = document.getElementById("modeSuperpower");
+
+      // Mode-Specific Live Superpowers
+      if (activeMode === "trip" || activeMode === "business") {
+        const matches = [...text.matchAll(/₹\s*(\d+)/g)];
+        const total = matches.reduce((s, m) => s + parseInt(m[1], 10), 0);
+        sp.textContent = `💰 Total Budget: ₹${total.toLocaleString('en-IN')}`;
+      } else if (activeMode === "plan") {
+        const todo = (text.match(/☐/g) || []).length;
+        const done = (text.match(/☑/g) || []).length;
+        const pct = (todo + done) ? Math.round((done / (todo + done)) * 100) : 0;
+        sp.textContent = `📊 Progress: ${pct}% (${done}/${todo + done} Done)`;
+      } else if (activeMode === "manga") {
+        const pages = (text.match(/📄/g) || []).length || 1;
+        const panels = (text.match(/🔲/g) || []).length;
+        const avg = (panels / pages).toFixed(1);
+        sp.textContent = `🔲 ${panels} Panels (${avg}/page) ${avg > 6 ? '⚠️ Crowded Page!' : '✓ Good Pacing'}`;
+      } else if (activeMode === "poem" || activeMode === "song" || activeMode === "devotional") {
+        const stanzas = trimmed ? trimmed.split(/\n\s*\n/).length : 0;
+        sp.textContent = `🪶 ${stanzas} Stanzas / Verses`;
+      } else if (activeMode === "movie" || activeMode === "play" || activeMode === "speech") {
+        const speakMins = (words / 130).toFixed(1);
+        sp.textContent = `🎙️ Est. Runtime: ${speakMins} mins`;
+      } else {
+        const clozeCount = (text.match(/\{\{.*?\}\}/g) || []).length;
+        sp.textContent = clozeCount ? `🧠 ${clozeCount} Cloze Terms Ready` : `✨ Studio Active`;
+      }
+    }
+
+    function insertSnippet(snippet) {
+      const ed = document.getElementById("mainEditor");
+      const start = ed.selectionStart;
+      const end = ed.selectionEnd;
+      ed.value = ed.value.substring(0, start) + snippet + ed.value.substring(end);
+      ed.selectionStart = ed.selectionEnd = start + snippet.length;
+      ed.focus();
+      handleEditorInput();
+    }
+
+    function loadModeTemplate() {
+      const ed = document.getElementById("mainEditor");
+      if (ed.value.trim() && !confirm("Replace current text with this mode's Starter Template?")) return;
+      ed.value = MODES[activeMode].template;
+      handleEditorInput();
+    }
+
+    /* ============================================================================
+       5. PROFESSIONAL TOOLS (OUTLINE, SCRAPBOOK, CLOZE, FLASHCARDS, RADAR, PINBOARD)
+       ============================================================================ */
+    function toggleDrawer(id) {
+      ["chapterDrawer", "outlineDrawer", "scrapDrawer"].forEach(d => {
+        if (d === id) document.getElementById(d).classList.toggle("open");
+        else document.getElementById(d).classList.remove("open");
+      });
+    }
+
+    function renderOutline() {
+      const text = document.getElementById("mainEditor").value;
+      const lines = text.split("\n");
+      const list = document.getElementById("outlineList");
+      list.innerHTML = "";
+      lines.forEach((line, idx) => {
+        const t = line.trim();
+        if (t.startsWith("#") || t.startsWith("INT.") || t.startsWith("EXT.") || t.startsWith("📅") || t.startsWith("🔲") || t.startsWith("॥")) {
+          const item = document.createElement("div");
+          item.className = "chapter-item";
+          item.textContent = t.replace(/^#+\s*/, "");
+          item.onclick = () => {
+            const ed = document.getElementById("mainEditor");
+            const pos = lines.slice(0, idx).join("\n").length;
+            ed.focus();
+            ed.setSelectionRange(pos, pos);
+          };
+          list.appendChild(item);
+        }
+      });
+      if (!list.children.length) {
+        list.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted);">Add headings (#), scenes (INT./EXT.), or dates (📅) to auto-generate your navigable outline & timeline.</div>`;
+      }
+    }
+
+    // Scrapbook & Snapshots
+    function cutSelectionToScrapbook() {
+      const ed = document.getElementById("mainEditor");
+      const sel = ed.value.substring(ed.selectionStart, ed.selectionEnd).trim();
+      if (!sel) { alert("Select some text in the editor first to cut to the Scrapbook."); return; }
+      const scraps = JSON.parse(localStorage.getItem(`omniscribe_scraps_${activeMode}`) || "[]");
+      scraps.unshift({ text: sel, time: new Date().toLocaleTimeString() });
+      localStorage.setItem(`omniscribe_scraps_${activeMode}`, JSON.stringify(scraps));
+      ed.value = ed.value.substring(0, ed.selectionStart) + ed.value.substring(ed.selectionEnd);
+      handleEditorInput();
+      renderScrapbook();
+    }
+
+    function saveSnapshot() {
+      const ed = document.getElementById("mainEditor");
+      if (!ed.value.trim()) return;
+      const scraps = JSON.parse(localStorage.getItem(`omniscribe_scraps_${activeMode}`) || "[]");
+      scraps.unshift({ text: ed.value, time: "📸 Snapshot " + new Date().toLocaleTimeString() });
+      localStorage.setItem(`omniscribe_scraps_${activeMode}`, JSON.stringify(scraps));
+      renderScrapbook();
+    }
+
+    function renderScrapbook() {
+      const scraps = JSON.parse(localStorage.getItem(`omniscribe_scraps_${activeMode}`) || "[]");
+      const list = document.getElementById("scrapList");
+      list.innerHTML = "";
+      scraps.forEach((s, i) => {
+        const d = document.createElement("div");
+        d.className = "chapter-item";
+        d.style.flexDirection = "column";
+        d.style.alignItems = "flex-start";
+        d.innerHTML = `
+          <div style="font-size:0.7rem; color:var(--accent); margin-bottom:0.25rem;">${s.time} (Tap to insert)</div>
+          <div style="font-size:0.78rem; max-height:60px; overflow:hidden;">${s.text.substring(0, 120)}...</div>
+        `;
+        d.onclick = () => insertSnippet(s.text);
+        list.appendChild(d);
+      });
+    }
+
+    // Cloze Masking {{...}}
+    function toggleClozeMask() {
+      const ed = document.getElementById("mainEditor");
+      const btn = document.getElementById("clozeBtn");
+      if (!clozeMasked) {
+        rawBackupText = ed.value;
+        ed.value = ed.value.replace(/\{\{(.*?)\}\}/g, "【 ❓ ______ 】");
+        ed.readOnly = true;
+        clozeMasked = true;
+        btn.classList.add("active");
+        btn.textContent = "👁️ Reveal {{...}}";
+      } else {
+        ed.value = rawBackupText;
+        ed.readOnly = false;
+        clozeMasked = false;
+        btn.classList.remove("active");
+        btn.textContent = "🙈 Mask {{...}}";
+      }
+    }
+
+    // Flashcards Generator
+    function openFlashcards() {
+      const text = clozeMasked ? rawBackupText : document.getElementById("mainEditor").value;
+      flashcards = [];
+      // Extract Cloze {{...}} cards
+      const lines = text.split("\n");
+      lines.forEach(l => {
+        const m = l.match(/\{\{(.*?)\}\}/);
+        if (m) flashcards.push({ q: l.replace(/\{\{(.*?)\}\}/g, "[ ...? ... ]"), a: m[1] });
+      });
+      // Extract ❓ Question / 💡 Answer pairs
+      const qaMatches = [...text.matchAll(/❓\s*(?:Question:?)?\s*(.*)\n💡\s*(?:Answer:?)?\s*(.*)/gi)];
+      qaMatches.forEach(m => flashcards.push({ q: m[1], a: m[2] }));
+
+      if (!flashcards.length) {
+        flashcards.push({
+          q: "How to create automatic Flashcards in any mode?",
+          a: "Wrap any key date or formula in {{double brackets}} OR use the '❓ Question' and '💡 Answer' smart buttons!"
+        });
+      }
+      fcIndex = 0;
+      renderFlashcard();
+      openModal("flashcardModal");
+    }
+
+    function renderFlashcard() {
+      const card = flashcards[fcIndex];
+      document.getElementById("fcFront").textContent = card.q;
+      const back = document.getElementById("fcBack");
+      back.textContent = "Answer: " + card.a;
+      back.style.display = "none";
+      document.getElementById("fcCounter").textContent = `${fcIndex + 1} / ${flashcards.length} (Tap card to flip)`;
+    }
+    function flipFlashcard() {
+      const back = document.getElementById("fcBack");
+      back.style.display = back.style.display === "none" ? "block" : "none";
+    }
+    function nextFlashcard() { fcIndex = (fcIndex + 1) % flashcards.length; renderFlashcard(); }
+    function prevFlashcard() { fcIndex = (fcIndex - 1 + flashcards.length) % flashcards.length; renderFlashcard(); }
+
+    // Readability & Pacing Radar
+    function openRadarModal() {
+      const text = document.getElementById("mainEditor").value.trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      const sentences = text ? text.split(/[.!?।॥]+/).filter(Boolean) : [];
+      const avgSent = sentences.length ? (words / sentences.length).toFixed(1) : 0;
+      const longSents = sentences.filter(s => s.trim().split(/\s+/).length > 25).length;
+      const dialogueMatches = text.match(/["“].*?["”]/g) || [];
+      const dialWords = dialogueMatches.join(" ").split(/\s+/).filter(Boolean).length;
+      const dialPct = words ? Math.round((dialWords / words) * 100) : 0;
+
+      document.getElementById("radarBody").innerHTML = `
+        <div class="chapter-item"><span>📏 Average Sentence Length</span> <strong>${avgSent} words</strong></div>
+        <div class="chapter-item"><span>⚠️ Long Sentences (>25 words)</span> <strong>${longSents} flagged</strong></div>
+        <div class="chapter-item"><span>💬 Dialogue Ratio</span> <strong>${dialPct}% of text</strong></div>
+        <div class="chapter-item"><span>📚 Total Vocabulary Volume</span> <strong>${words} words</strong></div>
+        <p style="font-size:0.78rem; color:var(--text-muted);">Tip: Keep average sentence length between 12–18 words for punchy readability.</p>
+      `;
+      openModal("radarModal");
+    }
+
+    // Reference Pinboard
+    function openPinboard() {
+      document.getElementById("pinboardPanel").classList.toggle("open");
+    }
+    function loadPinImage(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = document.getElementById("pinPreview");
+        img.src = ev.target.result;
+        img.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    }
+    function savePinboard() {
+      localStorage.setItem(`omniscribe_pin_${activeMode}`, document.getElementById("pinNotes").value);
+    }
+    function loadPinboard() {
+      document.getElementById("pinNotes").value = localStorage.getItem(`omniscribe_pin_${activeMode}`) || "";
+    }
+
+    // Symbol Palette
+    function initSymbolPalette() {
+      const grid = document.getElementById("symbolGrid");
+      SYMBOLS.forEach(s => {
+        const b = document.createElement("button");
+        b.className = "sym-btn";
+        b.textContent = s;
+        b.onclick = () => { insertSnippet(s); closeModals(); };
+        grid.appendChild(b);
+      });
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add("open"); }
+    function closeModals() { document.querySelectorAll(".modal-overlay").forEach(m => m.classList.remove("open")); }
+
+    /* ============================================================================
+       6. GRAPHIC POSTER EXPORT (PNG), AUDIO SYNTH, VOICE & VAULT BACKUP
+       ============================================================================ */
+    function exportGraphicPoster() {
+      const m = MODES[activeMode];
+      const title = document.getElementById("docTitle").value || m.name;
+      const body = document.getElementById("mainEditor").value.trim() || "Written in OmniScribe Studio.";
+
+      const c = document.createElement("canvas");
+      c.width = 1080;
+      c.height = 1350;
+      const ctx = c.getContext("2d");
+
+      // Rich Background Gradient
+      const grad = ctx.createLinearGradient(0, 0, 1080, 1350);
+      grad.addColorStop(0, m.bg1);
+      grad.addColorStop(1, m.bg2);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1080, 1350);
+
+      // Decorative Sacred/Geometric Graphic Rings
+      ctx.strokeStyle = m.accent + "33";
+      ctx.lineWidth = 3;
+      for (let r = 120; r <= 480; r += 90) {
+        ctx.beginPath();
+        ctx.arc(540, 675, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Outer Ornamental Border
+      ctx.strokeStyle = m.accent;
+      ctx.lineWidth = 6;
+      ctx.strokeRect(50, 50, 980, 1250);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(66, 66, 948, 1218);
+
+      // Title
+      ctx.fillStyle = m.accent;
+      ctx.font = "bold 46px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${m.icon} ${title.substring(0, 38)}`, 540, 165);
+
+      // Wrapped Text Content
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "32px Georgia, serif";
+      const lines = body.split("\n").slice(0, 20);
+      let y = 260;
+      lines.forEach(line => {
+        const words = line.split(" ");
+        let cur = "";
+        words.forEach(w => {
+          const test = cur + w + " ";
+          if (ctx.measureText(test).width > 840) {
+            ctx.fillText(cur, 540, y);
+            cur = w + " ";
+            y += 48;
+          } else cur = test;
+        });
+        ctx.fillText(cur, 540, y);
+        y += 52;
+      });
+
+      // Footer Branding
+      ctx.fillStyle = m.accent;
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillText(`Created in OmniScribe • ${m.name} Studio`, 540, 1245);
+
+      const a = document.createElement("a");
+      a.download = `${title.replace(/\s+/g, "_")}_Poster.png`;
+      a.href = c.toDataURL("image/png");
+      a.click();
+    }
+
+    function exportDocTxt() {
+      const title = document.getElementById("docTitle").value.trim() || activeMode;
+      const content = document.getElementById("mainEditor").value;
+      const blob = new Blob([`${title}\n${"=".repeat(title.length)}\n\n${content}`], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${title.replace(/[^a-z0-9-_]/gi, "_")}.txt`;
+      a.click();
+    }
+
+    // Zero-Dependency WebAudio Ambient Soundscape (Temple Drone / Rain Noise)
+    let audioCtx = null;
+    let isPlayingAudio = false;
+    function toggleAudio() {
+      const btn = document.getElementById("audioBtn");
+      if (!isPlayingAudio) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc1.type = "sine";
+        osc2.type = "triangle";
+        // Calm Tanpura / Theta Focus Drone (136.1 Hz Om frequency + fifth)
+        osc1.frequency.value = 136.1;
+        osc2.frequency.value = 204.15;
+        gain.gain.value = 0.04;
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc1.start();
+        osc2.start();
+        isPlayingAudio = true;
+        btn.classList.add("active");
+        btn.textContent = "🔇 Stop Audio";
+      } else {
+        if (audioCtx) audioCtx.close();
+        isPlayingAudio = false;
+        btn.classList.remove("active");
+        btn.textContent = "🎧 Ambient";
+      }
+    }
+
+    // Speech-to-Text & Read-Aloud
+    function speakText() {
+      if (!("speechSynthesis" in window)) return;
+      if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; }
+      const u = new SpeechSynthesisUtterance(document.getElementById("mainEditor").value);
+      speechSynthesis.speak(u);
+    }
+
+    function toggleDictation() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { alert("Voice dictation is supported in Chrome/Edge browsers."); return; }
+      const rec = new SR();
+      rec.onresult = e => insertSnippet(" " + e.results[0][0].transcript);
+      rec.start();
+    }
+
+    // Pomodoro Timer
+    let pomoTimer = null;
+    let pomoSecs = 1500;
+    function togglePomodoro() {
+      const el = document.getElementById("pomoDisplay");
+      if (pomoTimer) {
+        clearInterval(pomoTimer);
+        pomoTimer = null;
+        el.textContent = "⏱️ 25:00 Focus";
+      } else {
+        pomoSecs = 1500;
+        pomoTimer = setInterval(() => {
+          pomoSecs--;
+          const m = Math.floor(pomoSecs / 60);
+          const s = String(pomoSecs % 60).padStart(2, "0");
+          el.textContent = `🔥 ${m}:${s}`;
+          if (pomoSecs <= 0) clearInterval(pomoTimer);
+        }, 1000);
+      }
+    }
+
+    // PIN & Vault Backup
+    function setupPin() {
+      const p = prompt("Set a 4-Digit PIN for Personal Modes (Leave blank to remove PIN):");
+      if (p === null) return;
+      if (p.trim() === "") { localStorage.removeItem("omniscribe_pin"); alert("PIN removed."); }
+      else { localStorage.setItem("omniscribe_pin", p.trim()); alert("🔒 PIN saved!"); }
+    }
+
+    function exportFullVault() {
+      const data = { ...localStorage };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `OmniScribe_Vault_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+    }
+
+    function importFullVault(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const data = JSON.parse(ev.target.result);
+        Object.keys(data).forEach(k => {
+          if (k.startsWith("omniscribe_")) localStorage.setItem(k, data[k]);
+        });
+        alert("Vault restored!");
+        renderPortalCards();
+      };
+      reader.readAsText(file);
+    }
+
+    function updateStreak() {
+      const today = new Date().toDateString();
+      const last = localStorage.getItem("omniscribe_last_day");
+      let streak = parseInt(localStorage.getItem("omniscribe_streak") || "1", 10);
+      if (last && last !== today) streak++;
+      localStorage.setItem("omniscribe_last_day", today);
+      localStorage.setItem("omniscribe_streak", streak);
+      document.getElementById("streakBadge").textContent = `🔥 ${streak} Day Streak`;
+    }
+
+    /* ============================================================================
+       7. REAL-TIME HTML5 CANVAS PROCEDURAL GRAPHIC ENGINE (8 VISUAL SHADERS)
+       ============================================================================ */
+    const canvas = document.getElementById("bgCanvas");
+    const ctx = canvas.getContext("2d");
+    let animId = null;
+    let particles = [];
+    let angle = 0;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function startCanvasEngine(type = "stars", color = "#38bdf8") {
+      if (animId) cancelAnimationFrame(animId);
+      particles = Array.from({ length: 45 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2.5 + 1,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6
+      }));
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        angle += 0.004;
+
+        if (type === "mandala") {
+          // Sacred Rotating Lotus / Sri Geometry
+          ctx.save();
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(angle);
+          ctx.globalAlpha = 0.14;
+          for (let i = 0; i < 12; i++) {
+            ctx.rotate(Math.PI / 6);
+            ctx.beginPath();
+            ctx.ellipse(0, 120, 45, 120, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        } else if (type === "speedlines") {
+          // Manga Dynamic Action Lines
+          ctx.globalAlpha = 0.12;
+          const cx = canvas.width / 2, cy = canvas.height / 2;
+          for (let i = 0; i < 36; i++) {
+            const a = (i * Math.PI) / 18 + angle * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a) * 180, cy + Math.sin(a) * 180);
+            ctx.lineTo(cx + Math.cos(a) * 900, cy + Math.sin(a) * 900);
+            ctx.stroke();
+          }
+        } else if (type === "contours") {
+          // Geography Topographic Rings
+          ctx.globalAlpha = 0.14;
+          for (let r = 60; r < 550; r += 55) {
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height / 2, r + Math.sin(angle + r) * 15, r * 0.65, angle * 0.2, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        } else if (type === "waves") {
+          // Song & Content Audio Equalizer Waves
+          ctx.globalAlpha = 0.18;
+          ctx.beginPath();
+          for (let x = 0; x < canvas.width; x += 15) {
+            const y = canvas.height * 0.8 + Math.sin(x * 0.015 + angle * 8) * 35;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        // Ambient Floating Particles / Network Nodes
+        ctx.globalAlpha = 0.35;
+        particles.forEach((p, idx) => {
+          p.x += p.vx;
+          p.y += type === "sparks" ? -0.6 : p.vy;
+          if (p.x < 0) p.x = canvas.width;
+          if (p.x > canvas.width) p.x = 0;
+          if (p.y < 0) p.y = canvas.height;
+          if (p.y > canvas.height) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (type === "network" || type === "routes") {
+            const p2 = particles[(idx + 1) % particles.length];
+            const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+            if (dist < 140) {
+              ctx.globalAlpha = 0.12;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+          }
+        });
+
+        animId = requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    initApp();
+  </script>
+</body>
+</html>
